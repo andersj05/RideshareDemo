@@ -1,5 +1,5 @@
-import FareApp from "@/components/fare-app";
+import TestLab from "@/components/test-lab";
 
 export default function Page() {
-  return <FareApp />;
+  return <TestLab />;
 }

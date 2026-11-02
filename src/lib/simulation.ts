@@ -4,6 +4,13 @@ export type Powertrain = "Gas" | "Hybrid" | "EV";
 export type Priority = "price" | "pickup" | "emissions";
 export type Scenario = "balanced" | "rush" | "green";
 export type Pool = "all" | "matched";
+export type TaskGoal = "cheapest" | "fastest" | "green";
+export const DESIGN_VERSION = "mobile-lab-v2";
+export const TASK_LABELS: Record<TaskGoal, string> = {
+  cheapest: "Book the lowest-priced ride",
+  fastest: "Book the ride with the shortest pickup wait",
+  green: "Book an EV or hybrid at or below the cheapest gas fare",
+};
 
 export interface Place {
   id: string;
@@ -83,12 +90,16 @@ export interface Settings {
   seed: number;
   scenario: Scenario;
   pool: Pool;
+  task?: TaskGoal;
+  destinationId?: string;
 }
 export const DEFAULT_SETTINGS: Settings = {
   participant: "P001",
   seed: 1842,
   scenario: "balanced",
   pool: "all",
+  task: "cheapest",
+  destinationId: "ferry",
 };
 
 function random(seed: number) {
@@ -212,6 +223,29 @@ export interface Session {
   premiumPaid: number | null;
   offers: Offer[];
   events: StudyEvent[];
+  designVersion?: string;
+  task?: TaskGoal;
+  taskSuccess?: boolean | null;
+  intendedDestination?: string;
+  viewport?: { width: number; height: number };
+}
+export function rideLabel(offer: Offer) {
+  return offer.name.startsWith(offer.provider)
+    ? offer.name
+    : `${offer.provider} ${offer.name}`;
+}
+export function taskSucceeded(
+  task: TaskGoal,
+  selected: Offer,
+  offers: Offer[],
+  intended: string,
+  actual: string,
+) {
+  if (intended !== actual) return false;
+  if (task === "fastest")
+    return selected.pickup === Math.min(...offers.map((o) => o.pickup));
+  if (task === "green") return bookingMetrics(selected, offers).choseGreen;
+  return bookingMetrics(selected, offers).bookedCheapest;
 }
 export function bookingMetrics(selected: Offer, offers: Offer[]) {
   const cheapestPrice = Math.min(...offers.map((o) => o.price));
@@ -276,6 +310,12 @@ export function sessionsCsv(sessions: Session[]) {
     "green_eligible",
     "chose_affordable_green",
     "premium_paid",
+    "design_version",
+    "task",
+    "task_success",
+    "intended_destination",
+    "viewport_width",
+    "viewport_height",
   ];
   const rows = sessions.map((s) => [
     s.id,
@@ -299,6 +339,12 @@ export function sessionsCsv(sessions: Session[]) {
     s.greenEligible,
     s.choseGreen,
     s.premiumPaid,
+    s.designVersion,
+    s.task,
+    s.taskSuccess,
+    s.intendedDestination,
+    s.viewport?.width,
+    s.viewport?.height,
   ]);
   const escape = (value: unknown) => {
     let str = value == null ? "" : String(value);

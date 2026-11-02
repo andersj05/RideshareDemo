@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   bookingMetrics,
+  DESIGN_VERSION,
+  PLACES,
+  taskSucceeded,
   type Mode,
   type Offer,
   type Place,
@@ -14,11 +17,13 @@ import {
 const HISTORY_KEY = "fare-study-v1";
 const ACTIVE_KEY = "fare-active-v1";
 interface Active {
+  designVersion?: string;
   id: string;
   started: number;
   mode: Mode;
   settings: Settings;
   events: StudyEvent[];
+  viewport?: { width: number; height: number };
 }
 export function useStudy(settings: Settings, mode: Mode) {
   const active = useRef<Active | null>(null);
@@ -99,6 +104,13 @@ export function useStudy(settings: Settings, mode: Mode) {
               atMs: lastMs,
             },
           ],
+          designVersion: unfinished.designVersion,
+          task: unfinished.settings.task || "cheapest",
+          taskSuccess: null,
+          intendedDestination:
+            PLACES.find((p) => p.id === unfinished.settings.destinationId)
+              ?.name || "Ferry Building",
+          viewport: unfinished.viewport,
         });
       }
       saved.current = valid;
@@ -129,6 +141,7 @@ export function useStudy(settings: Settings, mode: Mode) {
     if (!active.current) {
       if (kind === "system") return;
       active.current = {
+        designVersion: DESIGN_VERSION,
         id:
           typeof crypto.randomUUID === "function"
             ? crypto.randomUUID()
@@ -139,6 +152,14 @@ export function useStudy(settings: Settings, mode: Mode) {
         mode,
         settings: { ...settings },
         events: [],
+        viewport: {
+          width:
+            document.querySelector("[data-mobile-screen]")?.clientWidth ||
+            window.innerWidth,
+          height:
+            document.querySelector("[data-mobile-screen]")?.clientHeight ||
+            window.innerHeight,
+        },
       };
       setElapsed(0);
     }
@@ -189,6 +210,21 @@ export function useStudy(settings: Settings, mode: Mode) {
       selected,
       offers: [...offers],
       events: [...run.events],
+      designVersion: DESIGN_VERSION,
+      task: run.settings.task || "cheapest",
+      intendedDestination:
+        PLACES.find((p) => p.id === (run.settings.destinationId || "ferry"))
+          ?.name || "Ferry Building",
+      taskSuccess: selected
+        ? taskSucceeded(
+            run.settings.task || "cheapest",
+            selected,
+            offers,
+            run.settings.destinationId || "ferry",
+            destination.id,
+          )
+        : null,
+      viewport: run.viewport,
       ...(selected
         ? bookingMetrics(selected, offers)
         : {

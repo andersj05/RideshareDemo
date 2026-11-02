@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/dm-sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "fare — A better way there",
+  title: "Rideshare Test Lab",
   description:
-    "A rideshare comparison and usability research prototype. Compare simulated rides, then test a simpler way to book.",
+    "A mobile usability lab for comparing separate rideshare apps with an aggregate booking flow.",
 };
 
 export default function RootLayout({
