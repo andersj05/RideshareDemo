@@ -121,9 +121,12 @@ export default function TestLab() {
     const target = (event.target as Element).closest<HTMLElement>(
       "button,input,select,[data-action]",
     );
+    // Controlled checkboxes record in onChange; capture-time rendering can
+    // restore their old checked value before React's change event runs.
     if (
       !target ||
       target.matches(":disabled") ||
+      target.matches('input[type="checkbox"]') ||
       target.closest("[data-untracked]")
     )
       return;
@@ -386,6 +389,11 @@ export default function TestLab() {
                       setSelected={setSelected}
                       greenOnly={greenOnly}
                       setGreenOnly={(value) => {
+                        study.record(
+                          "toggle_green_filter",
+                          "click",
+                          value ? "on" : "off",
+                        );
                         setGreenOnly(value);
                         if (value && selected?.powertrain === "Gas")
                           setSelected(null);

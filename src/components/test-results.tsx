@@ -359,6 +359,47 @@ export function TestResults({
             </table>
           </div>
         )}
+        <div className="mobile-session-list">
+          {[...visible].reverse().map((s) => (
+            <button
+              className="session-row"
+              key={s.id}
+              aria-label={`View session ${s.participant} ${s.id.slice(0, 8)}`}
+              onClick={() => setDetail(s)}
+            >
+              <span className="session-row-heading">
+                <strong>
+                  {s.participant || "Unnamed"} · {modeLabel(s.mode)}
+                </strong>
+                <ChevronRight size={18} />
+              </span>
+              <span className="session-row-meta">
+                <span className={`status-tag ${s.status}`}>{s.status}</span>
+                <span>
+                  {s.pool === "matched" ? "2" : "4"} providers · seed {s.seed}
+                </span>
+              </span>
+              <span className="session-row-numbers">
+                <span>
+                  <b>{s.clicks}</b> clicks
+                </span>
+                <span>
+                  <b>{durationLabel(s.elapsedSeconds)}</b> time
+                </span>
+                <span>
+                  Task met:{" "}
+                  <b>{s.taskSuccess == null ? "—" : yesNo(s.taskSuccess)}</b>
+                </span>
+              </span>
+              <span className="session-row-outcomes">
+                Cheapest:{" "}
+                {s.status === "completed" ? yesNo(s.bookedCheapest) : "—"} ·
+                Affordable green:{" "}
+                {s.status === "completed" ? yesNo(s.choseGreen) : "—"}
+              </span>
+            </button>
+          ))}
+        </div>
       </section>
       <div className="results-notes">
         <h2>How to read these numbers</h2>

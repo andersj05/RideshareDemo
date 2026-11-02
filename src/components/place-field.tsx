@@ -156,6 +156,7 @@ export function PlaceField({
               aria-selected={i === highlight}
               className={i === highlight ? "highlight" : ""}
               data-action={`select_${destination ? "destination" : "pickup"}`}
+              data-detail={p.name}
               onClick={() => choose(p)}
             >
               <span className="suggestion-pin">

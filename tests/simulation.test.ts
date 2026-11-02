@@ -11,9 +11,16 @@ import {
   sessionsCsv,
   sortOffers,
   summarize,
+  DESIGN_VERSION,
+  taskSucceeded,
   type Offer,
   type Session,
 } from "../src/lib/simulation";
+import {
+  DEFAULT_FILTERS,
+  comparisonWarnings,
+  filterSessions,
+} from "../src/lib/reporting";
 
 const fares = () =>
   generateOffers(DEFAULT_SETTINGS, DEFAULT_PICKUP, DEFAULT_DESTINATION);
@@ -181,4 +188,132 @@ test("CSV preserves commas, quotes and newlines while escaping spreadsheet formu
   assert.ok(csv.includes('"\'=SUM(1,2)"'));
   assert.ok(csv.includes('"A, ""B""\nC"'));
   assert.ok(csv.startsWith('"id","participant","mode"'));
+});
+
+test("task completion requires the intended destination even when the fare is cheapest", () => {
+  const offers = [offer("cheap", 10), offer("other", 15)];
+  assert.equal(
+    taskSucceeded("cheapest", offers[0], offers, "ferry", "dolores"),
+    false,
+  );
+  assert.equal(
+    taskSucceeded("cheapest", offers[0], offers, "ferry", "ferry"),
+    true,
+  );
+  assert.equal(
+    taskSucceeded("cheapest", offers[1], offers, "ferry", "ferry"),
+    false,
+  );
+});
+test("fastest task recognizes pickup ties and green task distinguishes unavailable opportunity", () => {
+  const offers = [
+    { ...offer("gas", 10), pickup: 2 },
+    { ...offer("ev", 10, "EV"), pickup: 2 },
+    { ...offer("slow", 14), pickup: 7 },
+  ];
+  assert.equal(
+    taskSucceeded("fastest", offers[1], offers, "ferry", "ferry"),
+    true,
+  );
+  assert.equal(
+    taskSucceeded("fastest", offers[2], offers, "ferry", "ferry"),
+    false,
+  );
+  assert.equal(
+    taskSucceeded("green", offers[1], offers, "ferry", "ferry"),
+    true,
+  );
+  assert.equal(
+    taskSucceeded("green", offers[0], offers, "ferry", "ferry"),
+    false,
+  );
+  assert.equal(
+    taskSucceeded("green", offers[0], [offers[0]], "ferry", "ferry"),
+    null,
+  );
+});
+test("reports keep previous designs separate by default, including abandoned attempts", () => {
+  const rows = [
+    session({ id: "old" }),
+    session({ id: "new", designVersion: DESIGN_VERSION }),
+    session({
+      id: "abandoned",
+      designVersion: DESIGN_VERSION,
+      status: "abandoned",
+    }),
+  ];
+  assert.deepEqual(
+    filterSessions(rows, DEFAULT_FILTERS).map((s) => s.id),
+    ["new", "abandoned"],
+  );
+  assert.equal(
+    filterSessions(rows, { ...DEFAULT_FILTERS, legacy: true }).length,
+    3,
+  );
+});
+test("report filters combine participant, seed, route, task, pool and scenario", () => {
+  const target = session({
+    designVersion: DESIGN_VERSION,
+    participant: "P004",
+    seed: 15,
+    scenario: "green",
+    pool: "matched",
+    task: "green",
+    intendedDestination: "Ferry Building",
+  });
+  const filters = {
+    ...DEFAULT_FILTERS,
+    participant: "P004",
+    seed: "15",
+    scenario: "green",
+    pool: "matched",
+    task: "green",
+    destination: "Ferry Building",
+  };
+  const rows = [
+    target,
+    session({ ...target, participant: "P005" }),
+    session({ ...target, seed: 16 }),
+    session({ ...target, intendedDestination: "Dolores Park" }),
+    session({ ...target, pool: "all" }),
+    session({ ...target, task: "cheapest" }),
+    session({ ...target, scenario: "balanced" }),
+  ];
+  assert.deepEqual(filterSessions(rows, filters), [target]);
+});
+test("comparison warnings expose mixed pool, design, task and viewport confounds", () => {
+  const a = session({
+    designVersion: DESIGN_VERSION,
+    task: "cheapest",
+    pool: "matched",
+    viewport: { width: 390, height: 650 },
+  });
+  const b = session({
+    task: "green",
+    pool: "all",
+    viewport: { width: 375, height: 500 },
+  });
+  assert.equal(comparisonWarnings([a, b]).length, 4);
+  assert.deepEqual(comparisonWarnings([a, { ...b, status: "abandoned" }]), []);
+});
+test("CSV includes task, design and viewport metadata for reproducibility", () => {
+  const csv = sessionsCsv([
+    session({
+      designVersion: DESIGN_VERSION,
+      task: "fastest",
+      taskSuccess: true,
+      intendedDestination: "Ferry Building",
+      viewport: { width: 390, height: 650 },
+    }),
+  ]);
+  assert.ok(
+    csv.includes(
+      '"design_version","task","task_success","intended_destination","viewport_width","viewport_height"',
+    ),
+  );
+  assert.ok(
+    csv.endsWith(
+      '"mobile-lab-v2","fastest","true","Ferry Building","390","650"',
+    ),
+  );
 });

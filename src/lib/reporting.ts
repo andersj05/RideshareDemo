@@ -32,6 +32,16 @@ export function filterSessions(sessions: Session[], filters: ReportFilters) {
 export function comparisonWarnings(sessions: Session[]) {
   const completed = sessions.filter((s) => s.status === "completed");
   const warnings: string[] = [];
+  if (
+    new Set(
+      completed
+        .filter((s) => s.viewport)
+        .map((s) => `${s.viewport!.width}x${s.viewport!.height}`),
+    ).size > 1
+  )
+    warnings.push(
+      "Phone viewports differ. Use the same screen size and participant-view setting for paired interface tests.",
+    );
   if (new Set(completed.map((s) => s.pool)).size > 1)
     warnings.push(
       "Provider pools differ. Use the matched pool filter to compare the interfaces with the same ride options.",

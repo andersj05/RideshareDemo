@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   bookingMetrics,
   DESIGN_VERSION,
+  DEFAULT_PICKUP,
   PLACES,
   taskSucceeded,
   type Mode,
@@ -216,13 +217,15 @@ export function useStudy(settings: Settings, mode: Mode) {
         PLACES.find((p) => p.id === (run.settings.destinationId || "ferry"))
           ?.name || "Ferry Building",
       taskSuccess: selected
-        ? taskSucceeded(
-            run.settings.task || "cheapest",
-            selected,
-            offers,
-            run.settings.destinationId || "ferry",
-            destination.id,
-          )
+        ? pickup.id !== DEFAULT_PICKUP.id
+          ? false
+          : taskSucceeded(
+              run.settings.task || "cheapest",
+              selected,
+              offers,
+              run.settings.destinationId || "ferry",
+              destination.id,
+            )
         : null,
       viewport: run.viewport,
       ...(selected

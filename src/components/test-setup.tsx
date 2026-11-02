@@ -150,7 +150,11 @@ export function LiveMetrics({
       <div className="panel-heading">
         <h2>Live observation</h2>
         <span className={`status-tag ${running ? "recording" : ""}`}>
-          {running ? "Recording" : "Ready"}
+          {running
+            ? "Recording"
+            : events.some((e) => e.action === "booking_confirmed")
+              ? "Complete"
+              : "Ready"}
         </span>
       </div>
       <div className="live-numbers">
